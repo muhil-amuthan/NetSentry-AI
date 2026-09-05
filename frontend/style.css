@@ -1,0 +1,45 @@
+/* Minimal scaffold styling for NetSentry-AI. */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.container {
+  text-align: center;
+  padding: 2rem;
+}
+
+h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.subtitle {
+  font-size: 1.25rem;
+  color: #94a3b8;
+  margin-bottom: 2rem;
+}
+
+.status {
+  font-size: 1rem;
+  color: #cbd5e1;
+}
+
+.online {
+  color: #4ade80;
+  font-weight: 600;
+}
