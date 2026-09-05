@@ -1,0 +1,342 @@
+{
+  "chunks": [
+    {
+      "id": "auth_failure.md::Title",
+      "runbook_id": "auth_failure.md",
+      "section": "Title",
+      "text": "Authentication Failure \u2014 RADIUS / AAA Rejects \u2014 Title\nAuthentication Failure \u2014 Repeated RADIUS Rejects"
+    },
+    {
+      "id": "auth_failure.md::Symptoms",
+      "runbook_id": "auth_failure.md",
+      "section": "Symptoms",
+      "text": "Authentication Failure \u2014 RADIUS / AAA Rejects \u2014 Symptoms\n- Syslog reports `Authentication failure` or `RADIUS timeout` bursts (\u22655 per minute)\n- Subscriber sessions fail to establish (PPPoE / DHCP auth rejects)\n- Usually clustered on 1-2 access devices after a configuration change\n- Other devices on same AAA server may be unaffected \u2014 points to local config mismatch"
+    },
+    {
+      "id": "auth_failure.md::Likely Causes",
+      "runbook_id": "auth_failure.md",
+      "section": "Likely Causes",
+      "text": "Authentication Failure \u2014 RADIUS / AAA Rejects \u2014 Likely Causes\n1. RADIUS shared secret mismatch after recent change (most common)\n2. AAA server unreachable or overloaded (check `RADIUS_TIMEOUT` correlation)\n3. Clock skew preventing certificate auth (check NTP/PTP status)\n4. Stale user database or realm mapping after change window"
+    },
+    {
+      "id": "auth_failure.md::Initial Checks",
+      "runbook_id": "auth_failure.md",
+      "section": "Initial Checks",
+      "text": "Authentication Failure \u2014 RADIUS / AAA Rejects \u2014 Initial Checks\n- Compare shared secret on device vs AAA server (`show radius server` and vault template)\n- Check AAA server reachability: `ping <aaa_ip>` and `show radius statistics`\n- Review change log for the affected devices in last 24h (look for AAA or template push)\n- Check if issue is isolated: are other devices using same AAA server healthy?\n- Check system time: `show clock` vs NTP source"
+    },
+    {
+      "id": "auth_failure.md::Recommended Actions",
+      "runbook_id": "auth_failure.md",
+      "section": "Recommended Actions",
+      "text": "Authentication Failure \u2014 RADIUS / AAA Rejects \u2014 Recommended Actions\n1. If secret mismatch confirmed, re-apply shared secret from golden template and test with `test aaa group radius`\n2. If AAA server is unreachable from device but reachable elsewhere, check management routing or ACL\n3. If isolated to RADIUS timeout with no auth rejects, investigate AAA server load and restart radius process if needed\n4. After fix, monitor auth success rate for 10 min \u2014 should return to >99%"
+    },
+    {
+      "id": "auth_failure.md::Escalation Conditions",
+      "runbook_id": "auth_failure.md",
+      "section": "Escalation Conditions",
+      "text": "Authentication Failure \u2014 RADIUS / AAA Rejects \u2014 Escalation Conditions\n- Fix requires vault secret rotation \u2192 escalate to security team\n- Multiple sites affected and AAA server itself is degraded \u2192 escalate to AAA platform team (P2)\n- No change found and other devices on same server are healthy \u2192 escalate for deep packet capture on RADIUS"
+    },
+    {
+      "id": "auth_failure.md::Evidence Tags",
+      "runbook_id": "auth_failure.md",
+      "section": "Evidence Tags",
+      "text": "Authentication Failure \u2014 RADIUS / AAA Rejects \u2014 Evidence Tags\n- Section `Initial Checks` for change-window correlation\n- Section `Recommended Actions` step 1 for secret re-application"
+    },
+    {
+      "id": "core_router_failure.md::Title",
+      "runbook_id": "core_router_failure.md",
+      "section": "Title",
+      "text": "Core Router Failure \u2014 Upstream Transit and Distribution Impact \u2014 Title\nCore Router Uplink or Device Failure With Downstream Cascade"
+    },
+    {
+      "id": "core_router_failure.md::Symptoms",
+      "runbook_id": "core_router_failure.md",
+      "section": "Symptoms",
+      "text": "Core Router Failure \u2014 Upstream Transit and Distribution Impact \u2014 Symptoms\n- Core router (`CORE-R1` or `CORE-R2`) reports `LINK_DOWN` on transit interface `Te0/1`\n- Within 30-120s, downstream distribution switches (`SW-S1`, `SW-S2`) report `LINK_DOWN` or `HIGH_LATENCY`\n- Access routers behind distribution (ACC-R3..R6) go `DEVICE_UNREACHABLE` in sequence\n- Packet loss appears on multiple downstream interfaces simultaneously\n- IGP / BGP sessions may drop (`BGP_SESSION_DROP`)"
+    },
+    {
+      "id": "core_router_failure.md::Likely Causes",
+      "runbook_id": "core_router_failure.md",
+      "section": "Likely Causes",
+      "text": "Core Router Failure \u2014 Upstream Transit and Distribution Impact \u2014 Likely Causes\n1. Fiber cut or SFP failure on core transit port\n2. Core device hardware or power failure\n3. Software crash or ISSU failure during maintenance\n4. Upstream provider outage (validate with provider status)\n5. Configuration change withdrawing IGP / BGP peering"
+    },
+    {
+      "id": "core_router_failure.md::Initial Checks",
+      "runbook_id": "core_router_failure.md",
+      "section": "Initial Checks",
+      "text": "Core Router Failure \u2014 Upstream Transit and Distribution Impact \u2014 Initial Checks\n- Verify core interface status and optics (see `link_down.md` Initial Checks for Te0/1)\n- Check device reachability: `ping CORE-R1` from core neighbor; if unreachable, confirm power and OOB\n- Review distribution reachability: are `SW-S1`/`SW-S2` isolated via topology (check `impact_of_failure`)?\n- Check BGP/IGP state: `show bgp summary`, `show ip ospf neighbor`\n- Confirm no recent config change on core in last 24h; check provider NOC status"
+    },
+    {
+      "id": "core_router_failure.md::Recommended Actions",
+      "runbook_id": "core_router_failure.md",
+      "section": "Recommended Actions",
+      "text": "Core Router Failure \u2014 Upstream Transit and Distribution Impact \u2014 Recommended Actions\n1. Validate optics on core transit port \u2014 if Rx low, fail traffic to standby core router (`CORE-R2`) via VRRP / IGP cost adjustment before touching fiber\n2. If core device itself is unreachable and OOB also fails, dispatch field ops immediately \u2014 do NOT attempt remote reboot without console\n3. Once core recovers, verify distribution uplinks automatically recover; if not, clear interface on distribution side\n4. Monitor subscriber reachability on access routers for 15 min \u2014 downstream restoration should follow IGP convergence"
+    },
+    {
+      "id": "core_router_failure.md::Escalation Conditions",
+      "runbook_id": "core_router_failure.md",
+      "section": "Escalation Conditions",
+      "text": "Core Router Failure \u2014 Upstream Transit and Distribution Impact \u2014 Escalation Conditions\n- Both core routers unreachable \u2192 P1 major incident, engage incident commander and provider immediately\n- Downstream does not recover after core recovers \u2192 escalate to routing team for IGP/BGP investigation\n- Repeated core failure within 24h \u2192 escalate to hardware TAC with crash info"
+    },
+    {
+      "id": "core_router_failure.md::Evidence Tags",
+      "runbook_id": "core_router_failure.md",
+      "section": "Evidence Tags",
+      "text": "Core Router Failure \u2014 Upstream Transit and Distribution Impact \u2014 Evidence Tags\n- Section `Initial Checks` for confirming core vs downstream root cause\n- Section `Recommended Actions` step 1 for standby core failover\n- Section `Escalation Conditions` for dual-core outage"
+    },
+    {
+      "id": "device_unreachable.md::Title",
+      "runbook_id": "device_unreachable.md",
+      "section": "Title",
+      "text": "Device Unreachable \u2014 Management Plane Loss \u2014 Title\nDevice Unreachable \u2014 ICMP/SNMP Polling Failure"
+    },
+    {
+      "id": "device_unreachable.md::Symptoms",
+      "runbook_id": "device_unreachable.md",
+      "section": "Symptoms",
+      "text": "Device Unreachable \u2014 Management Plane Loss \u2014 Symptoms\n- NMS reports `ICMP probe timed out after 3 attempts` or SNMP timeout\n- Device does not respond to SSH / NETCONF\n- Directly connected neighbors may report `LINK_DOWN` or `BGP_SESSION_DROP`\n- Subscriber sessions behind device may flap or show packet loss"
+    },
+    {
+      "id": "device_unreachable.md::Likely Causes",
+      "runbook_id": "device_unreachable.md",
+      "section": "Likely Causes",
+      "text": "Device Unreachable \u2014 Management Plane Loss \u2014 Likely Causes\n1. Control-plane overload (CPU >90%)\n2. Upstream link failure isolating the device (check topology upstream)\n3. Device hardware failure or unexpected reboot\n4. ACL or firewall change blocking management network\n5. Power or environmental failure at site"
+    },
+    {
+      "id": "device_unreachable.md::Initial Checks",
+      "runbook_id": "device_unreachable.md",
+      "section": "Initial Checks",
+      "text": "Device Unreachable \u2014 Management Plane Loss \u2014 Initial Checks\n- From nearest reachable hop, try `ping <mgmt_ip>` and `traceroute <mgmt_ip>`\n- Check upstream link status in NMS: is parent interface `LINK_DOWN`?\n- Review syslog for reboot messages (`System restarted`, `Power supply failure`)\n- Check CPU and memory telemetry for the device (last 15 min)\n- Verify management VRF routing and ACLs"
+    },
+    {
+      "id": "device_unreachable.md::Recommended Actions",
+      "runbook_id": "device_unreachable.md",
+      "section": "Recommended Actions",
+      "text": "Device Unreachable \u2014 Management Plane Loss \u2014 Recommended Actions\n1. If upstream link is down, follow `link_down.md` first \u2014 device may be reachable once transport recovers\n2. If device is isolated but powered, attempt out-of-band console access (LTE OOB)\n3. If CPU overload is confirmed, identify top talkers: `show processes cpu sorted`\n4. If no upstream cause, dispatch field ops with console access and crash log collection"
+    },
+    {
+      "id": "device_unreachable.md::Escalation Conditions",
+      "runbook_id": "device_unreachable.md",
+      "section": "Escalation Conditions",
+      "text": "Device Unreachable \u2014 Management Plane Loss \u2014 Escalation Conditions\n- Core device unreachable for >5 min with no redundant path \u2192 escalate to P1 incident commander\n- Multiple devices unreachable behind same distribution switch \u2192 escalate as site/aggregation failure\n- Device returns but state is unstable (flapping) \u2192 keep monitoring, do not auto-close"
+    },
+    {
+      "id": "device_unreachable.md::Evidence Tags",
+      "runbook_id": "device_unreachable.md",
+      "section": "Evidence Tags",
+      "text": "Device Unreachable \u2014 Management Plane Loss \u2014 Evidence Tags\n- Section `Initial Checks` for confirming upstream link vs device root cause\n- Section `Recommended Actions` step 1 for ordering with link_down evidence"
+    },
+    {
+      "id": "high_latency.md::Title",
+      "runbook_id": "high_latency.md",
+      "section": "Title",
+      "text": "High Latency \u2014 Control and Data Plane Delay \u2014 Title\nHigh Latency Above Baseline"
+    },
+    {
+      "id": "high_latency.md::Symptoms",
+      "runbook_id": "high_latency.md",
+      "section": "Symptoms",
+      "text": "High Latency \u2014 Control and Data Plane Delay \u2014 Symptoms\n- `rtt_ms` in alert is >80 ms vs baseline ~18 ms, or `jitter` >15 ms\n- May appear with `PACKET_LOSS` on same path, or alone during peak utilization\n- Latency typically measured by TWAMP or ICMP probes across the link\n- Users may report increased application response time without full outage"
+    },
+    {
+      "id": "high_latency.md::Likely Causes",
+      "runbook_id": "high_latency.md",
+      "section": "Likely Causes",
+      "text": "High Latency \u2014 Control and Data Plane Delay \u2014 Likely Causes\n1. Link congestion (buffer queue building) during peak hours\n2. Upstream routing change elongating the path (check traceroute hops)\n3. CPU overload delaying control-plane packet forwarding\n4. Upstream packet loss causing retransmit latency inflation\n5. Transient congestion due to link failure elsewhere (cascade propagation)"
+    },
+    {
+      "id": "high_latency.md::Initial Checks",
+      "runbook_id": "high_latency.md",
+      "section": "Initial Checks",
+      "text": "High Latency \u2014 Control and Data Plane Delay \u2014 Initial Checks\n- Compare `rtt_ms` to baseline and to peer direction (asymmetry indicates one-way congestion)\n- Check interface utilization: `show interfaces <if> | include rate` \u2014 look for >70% sustained\n- Review CPU on both ends: `show processes cpu` \u2014 high CPU adds forwarding delay\n- Check for recent routing changes: `show ip route <peer>`, `show bgp summary`\n- Correlate with packet loss on same device \u2014 if both present, treat loss as primary"
+    },
+    {
+      "id": "high_latency.md::Recommended Actions",
+      "runbook_id": "high_latency.md",
+      "section": "Recommended Actions",
+      "text": "High Latency \u2014 Control and Data Plane Delay \u2014 Recommended Actions\n1. If utilization is high, identify top talkers and consider temporary rate-limit or load balancing\n2. If latency is isolated and within SLA (<100 ms), monitor for 15 min \u2014 evening peak pattern may be benign\n3. If latency propagates from core, investigate upstream link (`link_down.md`) before tuning edge\n4. Clear interface counters and re-measure after any change: `clear counters <if>`"
+    },
+    {
+      "id": "high_latency.md::Escalation Conditions",
+      "runbook_id": "high_latency.md",
+      "section": "Escalation Conditions",
+      "text": "High Latency \u2014 Control and Data Plane Delay \u2014 Escalation Conditions\n- RTT holds above 100 ms for >15 min or breaches SLA \u2192 escalate to capacity planning\n- Latency with concurrent `DEVICE_UNREACHABLE` downstream \u2192 escalate as cascade failure (see `multi_device_cascade.md`)\n- No congestion or CPU cause found and latency remains \u2192 escalate to transport for OTN delay check"
+    },
+    {
+      "id": "high_latency.md::Evidence Tags",
+      "runbook_id": "high_latency.md",
+      "section": "Evidence Tags",
+      "text": "High Latency \u2014 Control and Data Plane Delay \u2014 Evidence Tags\n- Section `Initial Checks` for confirming congestion vs CPU vs routing\n- Section `Recommended Actions` step 2 for benign peak handling"
+    },
+    {
+      "id": "link_down.md::Title",
+      "runbook_id": "link_down.md",
+      "section": "Title",
+      "text": "Link Down \u2014 Interface or Transport Failure \u2014 Title\nLink Down \u2014 Physical or Logical Interface Failure"
+    },
+    {
+      "id": "link_down.md::Symptoms",
+      "runbook_id": "link_down.md",
+      "section": "Symptoms",
+      "text": "Link Down \u2014 Interface or Transport Failure \u2014 Symptoms\n- Interface operational status transitions to `down` (SNMP trap `linkDown` or syslog `Interface down`)\n- Adjacent device reports `DEVICE_UNREACHABLE` within seconds\n- Traffic counters stop incrementing on the affected interface\n- Downstream packet loss / latency may follow if no redundant path exists"
+    },
+    {
+      "id": "link_down.md::Likely Causes",
+      "runbook_id": "link_down.md",
+      "section": "Likely Causes",
+      "text": "Link Down \u2014 Interface or Transport Failure \u2014 Likely Causes\n1. Fiber patch cut, dirty connector, or bent fiber\n2. SFP / transceiver failure (high temperature, low Rx power)\n3. Remote device reboot or power loss\n4. Configuration change disabling the interface (`shutdown`)\n5. Upstream transport (DWDM/OTN) outage"
+    },
+    {
+      "id": "link_down.md::Initial Checks",
+      "runbook_id": "link_down.md",
+      "section": "Initial Checks",
+      "text": "Link Down \u2014 Interface or Transport Failure \u2014 Initial Checks\n- Verify interface admin vs oper state: `show interfaces <if> status`\n- Check optical levels: `show interfaces <if> transceiver detail` \u2014 expect Tx/Rx within vendor spec (-14 to -18 dBm for 10G-LR)\n- Inspect error counters: `show interfaces <if> counters errors` \u2014 rising input errors indicate media issue\n- Confirm peer interface status on the far end\n- Check for recent configuration changes in audit log (last 24h)\n- Ping the next hop across the link"
+    },
+    {
+      "id": "link_down.md::Recommended Actions",
+      "runbook_id": "link_down.md",
+      "section": "Recommended Actions",
+      "text": "Link Down \u2014 Interface or Transport Failure \u2014 Recommended Actions\n1. If optical Rx is below threshold, reseat the SFP and clean fiber connectors\n2. If peer is down, check power and environment on peer device first\n3. Fail traffic to redundant path if available (`clear mpls lsp` or IGP cost adjustment)\n4. Replace patch lead / SFP during maintenance window if errors persist\n5. Open field operations ticket if physical plant is suspected"
+    },
+    {
+      "id": "link_down.md::Escalation Conditions",
+      "runbook_id": "link_down.md",
+      "section": "Escalation Conditions",
+      "text": "Link Down \u2014 Interface or Transport Failure \u2014 Escalation Conditions\n- Multiple links down on the same device simultaneously \u2192 escalate as potential device or site failure\n- No matching peer failure but link stays down after SFP reseat \u2192 escalate to transport team\n- Repeated flapping (>3 times in 10 min) \u2192 treat as `IF_FLAP`, not single `LINK_DOWN`"
+    },
+    {
+      "id": "link_down.md::Evidence Tags",
+      "runbook_id": "link_down.md",
+      "section": "Evidence Tags",
+      "text": "Link Down \u2014 Interface or Transport Failure \u2014 Evidence Tags\n- Section `Initial Checks` is typically cited for optics verification\n- Section `Recommended Actions` step 1 for SFP/connector handling\n- Section `Escalation Conditions` for multi-link correlation"
+    },
+    {
+      "id": "multi_device_cascade.md::Title",
+      "runbook_id": "multi_device_cascade.md",
+      "section": "Title",
+      "text": "Multi-Device Cascade \u2014 Correlated Downstream Outage \u2014 Title\nMulti-Device Cascading Failure \u2014 Topology-Driven Correlation"
+    },
+    {
+      "id": "multi_device_cascade.md::Symptoms",
+      "runbook_id": "multi_device_cascade.md",
+      "section": "Symptoms",
+      "text": "Multi-Device Cascade \u2014 Correlated Downstream Outage \u2014 Symptoms\n- Multiple alerts (typically \u22655) from distinct devices within 5 minutes\n- Alerts are topologically adjacent (direct links in `topology.json`)\n- Alert types are related (`LINK_DOWN` \u2194 `DEVICE_UNREACHABLE` \u2194 `PACKET_LOSS`)\n- Earliest alert is usually highest in the hierarchy (core or distribution), latest is access\n- Underlying fingerprint count may be high but correlated grouping shows one incident"
+    },
+    {
+      "id": "multi_device_cascade.md::Likely Causes",
+      "runbook_id": "multi_device_cascade.md",
+      "section": "Likely Causes",
+      "text": "Multi-Device Cascade \u2014 Correlated Downstream Outage \u2014 Likely Causes\n1. Single upstream failure propagating downstream (fiber, SFP, or device)\n2. Power or environmental event affecting a site (e.g., `AGG-CHENNAI-02`)\n3. Software bug causing IGP churn and transient unreachability\n4. Upstream packet loss / latency inflating downstream measurements (not independent events)"
+    },
+    {
+      "id": "multi_device_cascade.md::Initial Checks",
+      "runbook_id": "multi_device_cascade.md",
+      "section": "Initial Checks",
+      "text": "Multi-Device Cascade \u2014 Correlated Downstream Outage \u2014 Initial Checks\n- Identify earliest alert timestamp \u2014 this is the likely root (check `first_seen`)\n- Map affected devices onto topology: run `impact_of_failure(root_device)` to see expected downstream set and compare to actual affected set\n- Count distinct fingerprints vs correlated grouping \u2014 high dedup ratio suggests repeated observations of same upstream cause\n- Check if alerts outside the main cluster remain ungrouped (noise) \u2014 these need separate triage"
+    },
+    {
+      "id": "multi_device_cascade.md::Recommended Actions",
+      "runbook_id": "multi_device_cascade.md",
+      "section": "Recommended Actions",
+      "text": "Multi-Device Cascade \u2014 Correlated Downstream Outage \u2014 Recommended Actions\n1. Focus investigation on the earliest (upstream) device first \u2014 confirm its interface/device state before touching downstream nodes\n2. Do NOT reboot downstream access routers while upstream is still down \u2014 they will recover via IGP when upstream returns\n3. If upstream is core and redundant peer exists, fail over to peer (see `core_router_failure.md` step 1)\n4. After upstream recovery, verify downstream devices in topology order (distribution before access) \u2014 clear counters and confirm packet loss returns to <1%"
+    },
+    {
+      "id": "multi_device_cascade.md::Escalation Conditions",
+      "runbook_id": "multi_device_cascade.md",
+      "section": "Escalation Conditions",
+      "text": "Multi-Device Cascade \u2014 Correlated Downstream Outage \u2014 Escalation Conditions\n- Root device not found or multiple roots with no common ancestor \u2192 escalate as ambiguous multi-incident, do not force a single root cause\n- Downstream devices remain unreachable after upstream recovers for >10 min \u2192 escalate to routing / transport for independent investigation\n- More than 10 devices affected or >2000 subscribers impacted \u2192 escalate to P1, engage incident commander"
+    },
+    {
+      "id": "multi_device_cascade.md::Evidence Tags",
+      "runbook_id": "multi_device_cascade.md",
+      "section": "Evidence Tags",
+      "text": "Multi-Device Cascade \u2014 Correlated Downstream Outage \u2014 Evidence Tags\n- Section `Initial Checks` for root identification via earliest timestamp and topology mapping\n- Section `Recommended Actions` step 1 for upstream-first strategy\n- Section `Escalation Conditions` for ambiguous root handling"
+    },
+    {
+      "id": "packet_loss.md::Title",
+      "runbook_id": "packet_loss.md",
+      "section": "Title",
+      "text": "Packet Loss \u2014 Forwarding Path Degradation \u2014 Title\nPacket Loss Exceeding Threshold"
+    },
+    {
+      "id": "packet_loss.md::Symptoms",
+      "runbook_id": "packet_loss.md",
+      "section": "Symptoms",
+      "text": "Packet Loss \u2014 Forwarding Path Degradation \u2014 Symptoms\n- `netflow` / `snmp` reports loss `>20%` over 5 min window (alert includes `loss_pct`)\n- User complaints of slow transfers, retransmits in TCP\n- May correlate with `HIGH_LATENCY` or `CRC_ERRORS` on same interface\n- Single interface typically affected; peer interface may be clean"
+    },
+    {
+      "id": "packet_loss.md::Likely Causes",
+      "runbook_id": "packet_loss.md",
+      "section": "Likely Causes",
+      "text": "Packet Loss \u2014 Forwarding Path Degradation \u2014 Likely Causes\n1. Dirty or damaged fiber causing CRC and retransmits\n2. Congested egress queue (output drops) during peak hours\n3. Faulty line card or SFP\n4. Upstream packet loss propagating downstream via back-pressure\n5. Duplex mismatch on copper handoff"
+    },
+    {
+      "id": "packet_loss.md::Initial Checks",
+      "runbook_id": "packet_loss.md",
+      "section": "Initial Checks",
+      "text": "Packet Loss \u2014 Forwarding Path Degradation \u2014 Initial Checks\n- Compare `loss_pct` on both ends of the link \u2014 local-only loss points to local media\n- Check interface error counters: `show interfaces <if> counters errors` \u2014 rising CRC/FCS\n- Review traffic load: `show interfaces <if> | include rate` \u2014 utilization >80% suggests congestion\n- Check QoS drops: `show policy-map interface <if>`\n- Correlate with latency (`rtt_ms`) \u2014 loss + latency suggests congestion or buffer bloat"
+    },
+    {
+      "id": "packet_loss.md::Recommended Actions",
+      "runbook_id": "packet_loss.md",
+      "section": "Recommended Actions",
+      "text": "Packet Loss \u2014 Forwarding Path Degradation \u2014 Recommended Actions\n1. If CRC errors rising and loss is local to one end, clean/replace SFP and patch lead\n2. If utilization high, check for elephant flows and apply or tune egress shaping\n3. If both ends show loss, look upstream: this is downstream propagation, follow core runbook\n4. Monitor for 15 min after mitigation \u2014 loss should return below 1% baseline"
+    },
+    {
+      "id": "packet_loss.md::Escalation Conditions",
+      "runbook_id": "packet_loss.md",
+      "section": "Escalation Conditions",
+      "text": "Packet Loss \u2014 Forwarding Path Degradation \u2014 Escalation Conditions\n- Loss persists after SFP replacement and utilization is normal \u2192 escalate to transport/optics\n- Loss affecting >1 interface on same device \u2192 suspect line card, escalate to hardware team\n- Loss coincides with `DEVICE_UNREACHABLE` on peer \u2192 treat as `LINK_DOWN` precursor, escalate"
+    },
+    {
+      "id": "packet_loss.md::Evidence Tags",
+      "runbook_id": "packet_loss.md",
+      "section": "Evidence Tags",
+      "text": "Packet Loss \u2014 Forwarding Path Degradation \u2014 Evidence Tags\n- Section `Initial Checks` for confirming local vs peer loss\n- Section `Recommended Actions` step 1 for physical media fix"
+    },
+    {
+      "id": "switch_failure.md::Title",
+      "runbook_id": "switch_failure.md",
+      "section": "Title",
+      "text": "Distribution Switch Degradation \u2014 Title\nDistribution Switch Uplink or Downlink Degradation"
+    },
+    {
+      "id": "switch_failure.md::Symptoms",
+      "runbook_id": "switch_failure.md",
+      "section": "Symptoms",
+      "text": "Distribution Switch Degradation \u2014 Symptoms\n- Distribution switch (`SW-S1` or `SW-S2`) reports `LINK_DOWN` on uplink towards core or downlink towards access\n- Access routers behind the switch report `DEVICE_UNREACHABLE` or `PACKET_LOSS`\n- Core side may show `PACKET_LOSS` toward the same switch\n- Isolated to one distribution domain \u2014 the peer distribution switch remains healthy"
+    },
+    {
+      "id": "switch_failure.md::Likely Causes",
+      "runbook_id": "switch_failure.md",
+      "section": "Likely Causes",
+      "text": "Distribution Switch Degradation \u2014 Likely Causes\n1. Uplink fiber or SFP failure between core and distribution\n2. Distribution switch CPU or line card overload\n3. Configuration change pushing bad VLAN or port-channel config\n4. Power anomaly at aggregation site\n5. Downstream access fiber cut appearing as distribution packet loss (check both ends)"
+    },
+    {
+      "id": "switch_failure.md::Initial Checks",
+      "runbook_id": "switch_failure.md",
+      "section": "Initial Checks",
+      "text": "Distribution Switch Degradation \u2014 Initial Checks\n- From core, check interface toward the distribution switch: `show interfaces <core_if> status`\n- On the distribution switch, check both uplink and downlink: `show interfaces et-0/0/1 status`, `show interfaces ge-0/0/10 status`\n- Check distribution CPU and logs: `show chassis alarms`, `show system uptime`\n- Map affected access devices: `show topology` \u2014 confirms blast radius is limited to this distribution's downstream\n- Compare loss counters on both sides of the link to identify local media vs remote"
+    },
+    {
+      "id": "switch_failure.md::Recommended Actions",
+      "runbook_id": "switch_failure.md",
+      "section": "Recommended Actions",
+      "text": "Distribution Switch Degradation \u2014 Recommended Actions\n1. If uplink is down, follow core recovery before touching distribution \u2014 distribution may be victim, not root\n2. If distribution itself is reachable but downlink LOS is local, clean/replace SFP on the affected `ge-0/0/x` port\n3. If CPU high, identify process: `show system processes extensive` and mitigate top talker\n4. If both distribution switches degrade simultaneously, treat as core-side cause per `core_router_failure.md`"
+    },
+    {
+      "id": "switch_failure.md::Escalation Conditions",
+      "runbook_id": "switch_failure.md",
+      "section": "Escalation Conditions",
+      "text": "Distribution Switch Degradation \u2014 Escalation Conditions\n- Both distribution switches down simultaneously \u2192 escalate as core or site failure, not isolated switch\n- Distribution switch unreachable and OOB fails \u2192 dispatch field ops with console\n- Repeated failures after SFP replacement \u2192 escalate to hardware TAC for line card diagnostics"
+    },
+    {
+      "id": "switch_failure.md::Evidence Tags",
+      "runbook_id": "switch_failure.md",
+      "section": "Evidence Tags",
+      "text": "Distribution Switch Degradation \u2014 Evidence Tags\n- Section `Initial Checks` for confirming uplink vs downlink root and blast radius mapping\n- Section `Recommended Actions` step 1 for upstream-first ordering"
+    }
+  ],
+  "dim": 384,
+  "use_gemini": false
+}

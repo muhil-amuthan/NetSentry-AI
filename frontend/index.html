@@ -166,6 +166,25 @@
           </div>
         </section>
 
+        <!-- SCENARIO SELECTOR (demo) -->
+        <section class="panel" style="padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;" aria-label="Scenario selector">
+          <div>
+            <strong class="mono" style="font-size:13px;">Demo Scenario</strong>
+            <span class="panel__sub" style="margin-left:8px;">Switch the deterministic fixture — pipeline re-runs live.</span>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <label class="sr-only" for="scenarioSelect">Select scenario</label>
+            <select id="scenarioSelect" class="ghostbtn" style="padding:8px 32px 8px 12px; border-radius:8px; background:var(--surface-2); border:1px solid var(--line);">
+              <option value="all">All scenarios (46 alerts)</option>
+              <option value="duplicate_alerts">Duplicate alerts (10 → dedup)</option>
+              <option value="cascade_failure">Cascade failure (26 → CRITICAL)</option>
+              <option value="unknown_escalation">Unknown escalation (10 → escalate)</option>
+            </select>
+            <button class="primarybtn" id="scenarioRun" style="padding:8px 14px; font-size:13px;">Load</button>
+            <span class="mono" id="scenarioStatus" style="color:var(--text-faint); font-size:12px;"></span>
+          </div>
+        </section>
+
         <!-- KPI CARDS -->
         <section class="kpis" id="kpiGrid" aria-label="Key network metrics"></section>
 
@@ -175,7 +194,7 @@
             <header class="panel__head">
               <div>
                 <h2 class="panel__title" id="incTitle">Priority Incidents</h2>
-                <p class="panel__sub">Ranked by deterministic priority score · mock data</p>
+                <p class="panel__sub" id="incSub">Ranked by deterministic priority score · live backend</p>
               </div>
               <div class="segmented" role="group" aria-label="Filter incidents by severity">
                 <button class="seg is-active" data-filter="all">All</button>
@@ -217,6 +236,7 @@
                 <li><i class="lg lg--warn"></i>Degraded</li>
                 <li><i class="lg lg--crit"></i>Down</li>
               </ul>
+              <button class="ghostbtn" id="topoRefresh" title="Reload topology with current incident impact" style="padding:6px 10px; font-size:12px;">Refresh</button>
             </header>
             <div class="topowrap">
               <svg id="topoSvg" class="topo" viewBox="0 0 720 380" role="img"
@@ -232,9 +252,9 @@
                 <h2 class="panel__title" id="aiTitle">
                   <span class="ai-spark" aria-hidden="true"></span> NetSentry Intelligence
                 </h2>
-                <p class="panel__sub">AI incident analysis · mock output</p>
+                <p class="panel__sub" id="aiSub">AI incident analysis · grounded in runbook evidence</p>
               </div>
-              <span class="chip chip--info">MOCK</span>
+              <span class="chip chip--info" id="aiChip">LIVE</span>
             </header>
             <div id="aiPanel" class="aipanel"></div>
           </section>
@@ -252,7 +272,7 @@
         </section>
 
         <footer class="foot">
-          <span>NetSentry AI · v0.1.0 · UI layer only — intelligence engine pending</span>
+          <span>NetSentry AI · v0.1.0 · Deterministic pipeline → Runbook retrieval → Grounded AI → Escalation</span>
           <span class="mono" id="footHealth">api: checking…</span>
         </footer>
       </main>
@@ -268,13 +288,14 @@
       <header class="askpanel__head">
         <div>
           <h2 id="askTitle">Ask NetSentry</h2>
-          <p>Natural-language triage console · mock responses</p>
+          <p>Natural-language triage console · live incidents & runbooks</p>
         </div>
         <button class="iconbtn" id="askClose" aria-label="Close Ask NetSentry">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
         </button>
       </header>
       <div class="askpanel__log" id="askLog" aria-live="polite"></div>
+      <p class="panel__sub" style="padding:6px 14px; font-size:11px; color:var(--text-faint);">Grounded retrieval · Deterministic facts vs AI explanation are distinguished. Escalation shown when confidence insufficient.</p>
       <div class="askpanel__suggest" id="askSuggest"></div>
       <form class="askpanel__form" id="askForm">
         <label class="sr-only" for="askInput">Ask a question about the network</label>

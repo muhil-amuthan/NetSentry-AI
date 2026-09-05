@@ -1,2 +1,9 @@
 fastapi
 uvicorn
+pydantic
+numpy
+faiss-cpu
+google-genai
+python-dotenv
+pytest
+httpx
