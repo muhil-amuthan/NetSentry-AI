@@ -528,7 +528,9 @@ class TestStep4ScopeBoundaries(unittest.TestCase):
         self.assertEqual(source.count("datetime.now"), 1)
 
     def test_engine_modules_are_still_stubs(self):
-        for module in ("processor", "scorer", "priority", "runbook_engine",
+        # scorer.py is implemented as of Step 6 (the correlation engine); the
+        # remaining downstream engines are still future work.
+        for module in ("processor", "priority", "runbook_engine",
                        "escalation", "nlp_handler", "database"):
             text = Path(f"src/{module}.py").read_text(encoding="utf-8")
             self.assertNotIn("def ", text, f"src/{module}.py should stay a stub in Step 4")

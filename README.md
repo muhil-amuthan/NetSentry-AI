@@ -13,10 +13,11 @@ NetSentry-AI will:
 5. Generate evidence-backed recommendations.
 6. Escalate unknown incidents to human engineers.
 
-> Status: Steps 1–4 are in place — the FastAPI/static-dashboard scaffold, the
-> data models, the network topology graph, and a deterministic telecom alert
-> generator with sample data. Alert processing, correlation, prioritisation,
-> runbook retrieval, recommendations and escalation are upcoming steps.
+> Status: Steps 1–6 are in place — the FastAPI/static-dashboard scaffold, the
+> data models, the network topology graph, a deterministic telecom alert
+> generator with sample data, and a deterministic alert **correlation
+> scoring engine**. Prioritisation, runbook retrieval, recommendations and
+> escalation are upcoming steps.
 
 ## Quick start
 
@@ -87,6 +88,64 @@ Deduplication, correlation, scoring, prioritisation, runbook retrieval and
 escalation are **not** implemented in this step — the generator only produces
 reliable input data for them.
 
+## Correlation Engine
+
+`src/scorer.py` turns processed alerts into groups of related alerts
+("candidate incidents") — the core intelligence of NetSentry-AI.
+
+**No LLM or model call is involved.** Correlation is deterministic,
+evidence-based scoring: the same alerts always produce the same scores, the
+same groupings and the same `INC-000N` ids. This keeps triage explainable and
+independently testable. A future step may use Gemini to *explain* an already
+correlated incident in plain language, but Gemini never decides which alerts
+belong together.
+
+Every pair of alerts is scored against four explicit signals (weights and the
+correlation threshold live in `CORRELATION_WEIGHTS` / `CORRELATION_THRESHOLD`,
+not scattered as magic numbers):
+
+| Signal | Points | Evidence |
+| --- | --- | --- |
+| Same device | +30 | Both alerts were raised by the same node |
+| Topology relationship | +20 | The two devices are directly linked in `data/topology.json` (`are_devices_related`) |
+| Time proximity | +20 | The alerts occurred within 5 minutes of each other |
+| Related alert types | +30 | The alert types are explicitly related (e.g. `LINK_DOWN` ↔ `DEVICE_UNREACHABLE`), per `RELATED_ALERT_TYPES` |
+
+A pair reaching the threshold (60/100) is *correlated*. Correlated pairs
+become edges in a graph over the alert set; candidate incidents are that
+graph's connected components (`build_candidate_incidents`), so cascading
+failures link up **transitively** — e.g. `CORE-R1 → SW-S1 → ACC-R3` end up in
+one incident even though `CORE-R1` and `ACC-R3` never score above the
+threshold directly.
+
+Every scoring result exposes its full breakdown, not just a total, for
+explainability:
+
+```json
+{
+  "score": 80,
+  "signals": {
+    "same_device": 30,
+    "related_device": 0,
+    "time_proximity": 20,
+    "related_type": 30
+  }
+}
+```
+
+```bash
+python -c "
+from src.generator import generate_scenario
+from src.scorer import build_candidate_incidents
+incidents = build_candidate_incidents(generate_scenario('cascade_failure'))
+for inc in incidents:
+    print(inc.incident_id, inc.alert_count, inc.affected_devices, inc.correlation_score)
+"
+```
+
+Priority scoring, root-cause analysis, runbook retrieval and the Gemini
+explanation layer build on top of these candidate incidents in later steps.
+
 ## Tests
 
 ```bash
@@ -106,7 +165,7 @@ NetSentry-AI/
 │   ├── generator.py       # Deterministic telecom alert generator
 │   ├── database.py        # Persistence layer (future)
 │   ├── processor.py       # Alert processing pipeline (future)
-│   ├── scorer.py          # Incident scoring engine (future)
+│   ├── scorer.py          # Deterministic correlation scoring engine (Step 6)
 │   ├── priority.py        # Incident prioritization (future)
 │   ├── runbook_engine.py  # Runbook retrieval (future)
 │   ├── escalation.py      # Escalation to engineers (future)
@@ -119,5 +178,6 @@ NetSentry-AI/
 └── tests/                 # Tests (unittest)
     ├── test_topology.py   # Topology + data models
     ├── test_generator.py  # Alert generator + sample data
+    ├── test_scorer.py     # Correlation scoring engine (Step 6)
     └── test_app.py        # FastAPI app still starts and serves
 ```
