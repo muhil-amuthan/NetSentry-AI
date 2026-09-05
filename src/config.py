@@ -24,6 +24,17 @@ PORT = int(os.getenv("NETSENTRY_PORT", "8000"))
 FRONTEND_DIR = BASE_DIR / "frontend"
 DATA_DIR = BASE_DIR / "data"
 RUNBOOKS_DIR = DATA_DIR / "runbooks"
+FAISS_INDEX_DIR = DATA_DIR / "faiss_index"
 
 TOPOLOGY_FILE = DATA_DIR / "topology.json"
 SAMPLE_ALERTS_FILE = DATA_DIR / "sample_alerts.json"
+FAISS_INDEX_FILE = FAISS_INDEX_DIR / "index.faiss"
+FAISS_META_FILE = FAISS_INDEX_DIR / "meta.json"
+
+# Gemini / AI settings
+GEMINI_MODEL_EMBEDDING = os.getenv("GEMINI_MODEL_EMBEDDING", "gemini-embedding-001")
+GEMINI_MODEL_GENERATION = os.getenv("GEMINI_MODEL_GENERATION", "gemini-2.0-flash")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
+# Processing defaults
+DEFAULT_SCENARIO = os.getenv("NETSENTRY_SCENARIO", "all")

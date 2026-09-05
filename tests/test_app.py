@@ -83,7 +83,10 @@ class TestApplicationStartup(unittest.TestCase):
         status, headers, body = call_asgi("/api/health")
         self.assertEqual(status, 200)
         self.assertIn("application/json", headers.get("content-type", ""))
-        self.assertEqual(json.loads(body), {"status": "ok", "project": "NetSentry-AI"})
+        payload = json.loads(body)
+        # Health must at least contain status ok and project name; extra fields (version, scenario) are allowed in later steps.
+        self.assertEqual(payload.get("status"), "ok")
+        self.assertEqual(payload.get("project"), "NetSentry-AI")
 
     def test_dashboard_still_served(self):
         status, headers, body = call_asgi("/")
