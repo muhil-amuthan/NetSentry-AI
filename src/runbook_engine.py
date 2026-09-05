@@ -36,6 +36,32 @@ from src.scorer import CandidateIncident, AlertView
 from src.priority import PriorityResult
 from src.topology import get_topology
 
+# Helpers to handle both Alert and AlertView (since scorer may store either)
+def _alert_type_str(av) -> str:
+    if hasattr(av, 'alert_type'):
+        return str(getattr(av, 'alert_type'))
+    if hasattr(av, 'type'):
+        t = getattr(av, 'type')
+        return t.value if hasattr(t, 'value') else str(t)
+    return "UNKNOWN"
+
+def _alert_device_id(av) -> str:
+    if hasattr(av, 'device_id'):
+        return str(getattr(av, 'device_id'))
+    if hasattr(av, 'node_id'):
+        return str(getattr(av, 'node_id'))
+    return ""
+
+def _alert_id_str(av) -> str:
+    if hasattr(av, 'alert_id'):
+        return str(getattr(av, 'alert_id'))
+    if hasattr(av, 'id'):
+        return str(getattr(av, 'id'))
+    return ""
+
+def _alert_timestamp(av):
+    return getattr(av, 'timestamp', None)
+
 # Optional FAISS import — degrade gracefully if not installed
 try:
     import faiss
@@ -424,7 +450,7 @@ def _keyword_score_incident_vs_runbook(
     """
     incident_types: Set[str] = set()
     for av in incident.alerts:
-        t = av.alert_type
+        t = _alert_type_str(av)
         if isinstance(t, str):
             incident_types.add(t.upper())
         else:
@@ -557,15 +583,18 @@ def retrieve_runbooks(
                 parts = []
                 type_set = set()
                 for av in incident.alerts:
-                    type_set.add(av.alert_type)
-                    src = av.source
+                    type_set.add(_alert_type_str(av))
+                    src = getattr(av, 'source', av)
                     msg = ""
-                    if hasattr(src, "representative") and hasattr(src.representative, "message"):
-                        msg = src.representative.message
+                    # handle ProcessedAlert-like wrapper inside source or direct Alert
+                    if hasattr(src, "representative") and hasattr(getattr(src, "representative", None), "message"):
+                        msg = getattr(src.representative, "message", "") or ""
                     elif hasattr(src, "message"):
-                        msg = getattr(src, "message", "")
+                        msg = getattr(src, "message", "") or ""
+                    elif hasattr(av, "message"):
+                        msg = getattr(av, "message", "") or ""
                     if msg:
-                        parts.append(msg)
+                        parts.append(str(msg))
                 query_text = f"Incident {incident.incident_id} alert types: {', '.join(sorted(type_set))}. Devices: {', '.join(incident.affected_devices)}. Messages: {' '.join(parts[:5])}"
                 sem_results = _semantic_search(query_text, index, chunks, top_k=top_k*2)
                 # Precompute keyword validity for runbooks to filter hallucinations
@@ -640,16 +669,34 @@ def _build_incident_context(
     for av in incident.alerts[:8]:
         sev = "UNKNOWN"
         msg = ""
-        src = av.source
-        if hasattr(src, "representative"):
-            sev = getattr(src.representative, "severity", "UNKNOWN")
-            msg = getattr(src.representative, "message", "")
-            sev = sev.value if hasattr(sev, "value") else str(sev)
-        elif hasattr(src, "severity"):
-            sev = getattr(src, "severity", "UNKNOWN")
-            sev = sev.value if hasattr(sev, "value") else str(sev)
-            msg = getattr(src, "message", "")
-        lines.append(f" - Alert {av.alert_id}: {av.alert_type} on {av.device_id} severity {sev} — {msg[:120]}")
+        src = getattr(av, 'source', None)
+        # Try source first
+        if src is not None and hasattr(src, "representative"):
+            try:
+                sev = getattr(src.representative, "severity", "UNKNOWN")
+                msg = getattr(src.representative, "message", "") or ""
+                sev = sev.value if hasattr(sev, "value") else str(sev)
+            except Exception:
+                pass
+        elif src is not None and hasattr(src, "severity"):
+            try:
+                sev = getattr(src, "severity", "UNKNOWN")
+                sev = sev.value if hasattr(sev, "value") else str(sev)
+                msg = getattr(src, "message", "") or ""
+            except Exception:
+                pass
+        # Fallback to av itself (Alert or AlertView without source)
+        if sev == "UNKNOWN" and hasattr(av, "severity"):
+            try:
+                sev = getattr(av, "severity", "UNKNOWN")
+                sev = sev.value if hasattr(sev, "value") else str(sev)
+                msg = getattr(av, "message", "") or ""
+            except Exception:
+                pass
+        aid = _alert_id_str(av)
+        atype = _alert_type_str(av)
+        did = _alert_device_id(av)
+        lines.append(f" - Alert {aid}: {atype} on {did} severity {sev} — {str(msg)[:120]}")
     return "\n".join(lines)
 
 
@@ -684,9 +731,12 @@ def _deterministic_recommendation(
     primary = evidence[0]
     # Build what_happened from incident
     # Determine root candidate: earliest alert device
-    sorted_alerts = sorted(incident.alerts, key=lambda av: av.timestamp)
-    root_device = sorted_alerts[0].device_id if sorted_alerts else (affected[0] if affected else "unknown")
-    type_set = sorted({av.alert_type for av in incident.alerts})
+    try:
+        sorted_alerts = sorted(incident.alerts, key=lambda av: getattr(av, 'timestamp', None) or getattr(av, 'first_seen', None) or incident.first_seen)
+    except Exception:
+        sorted_alerts = list(incident.alerts)
+    root_device = _alert_device_id(sorted_alerts[0]) if sorted_alerts else (affected[0] if affected else "unknown")
+    type_set = sorted({_alert_type_str(av) for av in incident.alerts})
 
     # Priority label
     pri = priority.priority if priority else "MEDIUM"

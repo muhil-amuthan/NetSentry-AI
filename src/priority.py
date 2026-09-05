@@ -130,29 +130,46 @@ def _device_role_weight(device_id: str, topology: Optional[NetworkTopology]) -> 
     return DEVICE_ROLE_WEIGHTS["unknown"], "unknown"
 
 
-def _severity_for_alert_view(view: AlertView) -> str:
+def _severity_for_alert_view(view) -> str:
     """
     Extract severity string from an AlertView's source.
-    AlertView.source may be Alert, ProcessedAlert, or AlertView itself.
+    Handles Alert, ProcessedAlert, AlertView, or any hybrid.
     """
-    src = view.source
-    # If source is AlertView (recursive) unwrap?
-    # Check for ProcessedAlert
+    # Direct cases: view itself is Alert or ProcessedAlert
+    if isinstance(view, ProcessedAlert):
+        try:
+            return _normalize_severity(view.representative.severity)
+        except Exception:
+            pass
+    if isinstance(view, Alert):
+        try:
+            return _normalize_severity(view.severity)
+        except Exception:
+            pass
+    # For AlertView-like, inspect source
+    src = getattr(view, 'source', None)
     if isinstance(src, ProcessedAlert):
-        sev = src.representative.severity
-        return _normalize_severity(sev)
+        try:
+            sev = src.representative.severity
+            return _normalize_severity(sev)
+        except Exception:
+            pass
     if isinstance(src, Alert):
-        return _normalize_severity(src.severity)
-    # Fallback: if AlertView was built from something else, try to infer via
-    # the Alert model stored inside? We already handled ProcessedAlert/Alert.
-    # As last resort, try attributes that might exist on view.source
+        try:
+            return _normalize_severity(src.severity)
+        except Exception:
+            pass
     if src is not None and hasattr(src, "severity"):
         try:
             return _normalize_severity(getattr(src, "severity"))
         except Exception:
             pass
     if hasattr(view, "severity"):
-        return _normalize_severity(getattr(view, "severity"))
+        try:
+            return _normalize_severity(getattr(view, "severity"))
+        except Exception:
+            pass
+    # Fallback: try to infer from type? default INFO
     return "INFO"
 
 
