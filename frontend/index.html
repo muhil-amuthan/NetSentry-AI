@@ -3,15 +3,287 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NetSentry AI</title>
+    <title>NetSentry AI — Network Intelligence Command Center</title>
+    <meta
+      name="description"
+      content="NetSentry AI — Telecom Network Incident Triage Assistant. Network Intelligence Command Center."
+    />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b1017'/%3E%3Cpath d='M8 22V10l16 12V10' stroke='%2334d3ee' stroke-width='2.5' fill='none' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <main class="container">
-      <h1>NetSentry AI</h1>
-      <p class="subtitle">Telecom Network Incident Triage Assistant</p>
-      <p class="status">System Status: <span class="online">Online</span></p>
-    </main>
+    <a class="skip-link" href="#main">Skip to main content</a>
+
+    <!-- ============================ TOP BAR ============================ -->
+    <header class="topbar" role="banner">
+      <div class="topbar__brand">
+        <button
+          class="iconbtn topbar__menu"
+          id="navToggle"
+          aria-label="Toggle navigation"
+          aria-expanded="false"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        </button>
+        <span class="brandmark" aria-hidden="true">
+          <svg viewBox="0 0 32 32"><path d="M6 23V9l20 14V9" /></svg>
+        </span>
+        <span class="brand__text">
+          <strong>NetSentry AI</strong>
+          <small>Network Intelligence Command Center</small>
+        </span>
+      </div>
+
+      <div class="topbar__status" role="status" aria-live="polite">
+        <span class="chip chip--ok">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          NOC ONLINE
+        </span>
+        <span class="chip chip--muted mono" id="clock" aria-label="Current time">--:--:--</span>
+        <span class="chip chip--info">
+          <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          ALERT STREAM
+          <b class="mono" id="streamRate">18/min</b>
+        </span>
+      </div>
+
+      <div class="topbar__actions">
+        <button class="iconbtn" aria-label="Notifications (3 unread)" title="Notifications">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 16V11a6 6 0 1 0-12 0v5l-1.5 2.5h15L18 16Z" />
+            <path d="M10 20a2 2 0 0 0 4 0" />
+          </svg>
+          <span class="iconbtn__badge" aria-hidden="true">3</span>
+        </button>
+        <button class="iconbtn" aria-label="Settings" title="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 3v2.2M12 18.8V21M4.2 7.5l1.9 1.1M17.9 15.4l1.9 1.1M4.2 16.5l1.9-1.1M17.9 8.6l1.9-1.1" />
+          </svg>
+        </button>
+        <div class="operator" title="Signed in operator">
+          <span class="avatar" aria-hidden="true">MA</span>
+          <span class="operator__meta">
+            <strong>M. Amuthan</strong>
+            <small>NOC Operator · L2</small>
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <div class="shell">
+      <!-- ========================== SIDEBAR ========================== -->
+      <nav class="sidebar" id="sidebar" aria-label="Primary">
+        <div class="navgroup">
+          <p class="navgroup__title">Command Center</p>
+          <ul>
+            <li><a class="navlink is-active" href="#" data-view="overview" aria-current="page">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-4H4v4ZM14 8h6V4h-6v4Z"/></svg>
+              <span>Overview</span></a></li>
+            <li><a class="navlink" href="#" data-view="alerts">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg>
+              <span>Live Alerts</span><b class="navlink__count">127</b></a></li>
+            <li><a class="navlink" href="#" data-view="incidents">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H8l-4 3V5Z"/></svg>
+              <span>Incidents</span><b class="navlink__count navlink__count--crit">8</b></a></li>
+            <li><a class="navlink" href="#" data-view="topology">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="19" r="2.2"/><circle cx="19" cy="19" r="2.2"/><path d="M12 7.2 5.9 16.9M12 7.2l6.1 9.7"/></svg>
+              <span>Network Topology</span></a></li>
+            <li><a class="navlink" href="#" data-view="runbooks">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11l3 3v13H5V4Z"/><path d="M8 10h8M8 14h6"/></svg>
+              <span>Runbooks</span></a></li>
+            <li><a class="navlink" href="#" data-view="history">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>
+              <span>Incident History</span></a></li>
+          </ul>
+        </div>
+
+        <div class="navgroup">
+          <p class="navgroup__title">Intelligence</p>
+          <ul>
+            <li><a class="navlink" href="#" data-view="ai">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 14 9l5.5 2-5.5 2-2 5.5L10 13l-5.5-2L10 9l2-5.5Z"/></svg>
+              <span>AI Analysis</span></a></li>
+            <li><a class="navlink" href="#" data-view="ask" id="navAsk">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z"/><path d="M12 12.5V12c0-1 1.8-1.2 1.8-2.6A1.9 1.9 0 0 0 10.3 8"/></svg>
+              <span>Ask NetSentry</span></a></li>
+          </ul>
+        </div>
+
+        <div class="navgroup">
+          <p class="navgroup__title">System</p>
+          <ul>
+            <li><a class="navlink" href="#" data-view="health">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2 5 3-11 2 6h7"/></svg>
+              <span>System Health</span><b class="navlink__count navlink__count--ok" id="apiHealthDot">•</b></a></li>
+            <li><a class="navlink" href="#" data-view="settings">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.2M12 18.8V21M4.2 7.5l1.9 1.1M17.9 15.4l1.9 1.1M4.2 16.5l1.9-1.1M17.9 8.6l1.9-1.1"/></svg>
+              <span>Settings</span></a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar__engine">
+          <p class="navgroup__title">AI Engine</p>
+          <div class="engine">
+            <span class="pulse-dot pulse-dot--info" aria-hidden="true"></span>
+            <div>
+              <strong>READY</strong>
+              <small>Triage model idle · 0 queued</small>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <!-- =========================== MAIN =========================== -->
+      <main class="main" id="main">
+        <!-- HERO -->
+        <section class="panel hero" aria-labelledby="heroTitle">
+          <div class="hero__left">
+            <p class="eyebrow" id="heroTitle">Network Status</p>
+            <h1 class="hero__status">
+              <span class="pulse-ring" aria-hidden="true"><span></span></span>
+              <span id="netStatusText">Operational</span>
+            </h1>
+            <p class="hero__meta">
+              Last updated <span id="lastUpdated">just now</span>
+              <span class="dot-sep" aria-hidden="true"></span>
+              Region <b>IN-SOUTH-1</b>
+              <span class="dot-sep" aria-hidden="true"></span>
+              Polling <b class="mono">5s</b>
+            </p>
+            <ul class="hero__facts" id="heroFacts"></ul>
+          </div>
+
+          <div class="hero__right">
+            <div class="healthcard">
+              <div class="healthcard__head">
+                <span class="eyebrow">Network Health</span>
+                <span class="healthcard__score mono" id="healthScore">94%</span>
+              </div>
+              <div class="segbar" id="healthBar" role="img" aria-label="Overall network health 94 percent"></div>
+              <ul class="tierlist" id="tierList"></ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- KPI CARDS -->
+        <section class="kpis" id="kpiGrid" aria-label="Key network metrics"></section>
+
+        <!-- INCIDENTS + ALERT STREAM -->
+        <div class="grid grid--incidents">
+          <section class="panel" aria-labelledby="incTitle">
+            <header class="panel__head">
+              <div>
+                <h2 class="panel__title" id="incTitle">Priority Incidents</h2>
+                <p class="panel__sub">Ranked by deterministic priority score · mock data</p>
+              </div>
+              <div class="segmented" role="group" aria-label="Filter incidents by severity">
+                <button class="seg is-active" data-filter="all">All</button>
+                <button class="seg" data-filter="critical">Critical</button>
+                <button class="seg" data-filter="high">High</button>
+                <button class="seg" data-filter="open">Open</button>
+              </div>
+            </header>
+            <ul class="incidents" id="incidentList"></ul>
+          </section>
+
+          <section class="panel panel--stream" aria-labelledby="streamTitle">
+            <header class="panel__head">
+              <div>
+                <h2 class="panel__title" id="streamTitle">Live Alert Stream</h2>
+                <p class="panel__sub"><span id="streamCount">0</span> events in buffer</p>
+              </div>
+              <button class="ghostbtn" id="streamToggle" aria-pressed="true">
+                <span class="pulse-dot" aria-hidden="true"></span> Live
+              </button>
+            </header>
+            <div class="stream__cols" aria-hidden="true">
+              <span>Time</span><span>Node</span><span>Event</span><span>Sev</span>
+            </div>
+            <ul class="stream" id="alertStream" aria-live="polite" aria-relevant="additions"></ul>
+          </section>
+        </div>
+
+        <!-- TOPOLOGY + AI -->
+        <div class="grid grid--topology">
+          <section class="panel" aria-labelledby="topoTitle">
+            <header class="panel__head">
+              <div>
+                <h2 class="panel__title" id="topoTitle">Network Topology</h2>
+                <p class="panel__sub">Core → Distribution → Access · 9 managed nodes</p>
+              </div>
+              <ul class="legend">
+                <li><i class="lg lg--ok"></i>Healthy</li>
+                <li><i class="lg lg--warn"></i>Degraded</li>
+                <li><i class="lg lg--crit"></i>Down</li>
+              </ul>
+            </header>
+            <div class="topowrap">
+              <svg id="topoSvg" class="topo" viewBox="0 0 720 380" role="img"
+                   aria-label="Simplified network topology: Internet to Core R1, to switches S1 and S2, to access routers R3 to R6.">
+              </svg>
+              <div class="topotip" id="topoTip" role="tooltip" hidden></div>
+            </div>
+          </section>
+
+          <section class="panel panel--ai" aria-labelledby="aiTitle">
+            <header class="panel__head">
+              <div>
+                <h2 class="panel__title" id="aiTitle">
+                  <span class="ai-spark" aria-hidden="true"></span> NetSentry Intelligence
+                </h2>
+                <p class="panel__sub">AI incident analysis · mock output</p>
+              </div>
+              <span class="chip chip--info">MOCK</span>
+            </header>
+            <div id="aiPanel" class="aipanel"></div>
+          </section>
+        </div>
+
+        <!-- TIMELINE -->
+        <section class="panel" aria-labelledby="tlTitle">
+          <header class="panel__head">
+            <div>
+              <h2 class="panel__title" id="tlTitle">Incident Timeline</h2>
+              <p class="panel__sub" id="tlSub">INC-2048 · Core Router R1 Failure</p>
+            </div>
+          </header>
+          <ol class="timeline" id="timeline"></ol>
+        </section>
+
+        <footer class="foot">
+          <span>NetSentry AI · v0.1.0 · UI layer only — intelligence engine pending</span>
+          <span class="mono" id="footHealth">api: checking…</span>
+        </footer>
+      </main>
+    </div>
+
+    <!-- ====================== ASK NETSENTRY ====================== -->
+    <button class="askfab" id="askFab" aria-expanded="false" aria-controls="askPanel">
+      <span class="ai-spark" aria-hidden="true"></span>
+      Ask NetSentry
+    </button>
+
+    <aside class="askpanel" id="askPanel" role="dialog" aria-modal="false" aria-labelledby="askTitle" hidden>
+      <header class="askpanel__head">
+        <div>
+          <h2 id="askTitle">Ask NetSentry</h2>
+          <p>Natural-language triage console · mock responses</p>
+        </div>
+        <button class="iconbtn" id="askClose" aria-label="Close Ask NetSentry">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+      <div class="askpanel__log" id="askLog" aria-live="polite"></div>
+      <div class="askpanel__suggest" id="askSuggest"></div>
+      <form class="askpanel__form" id="askForm">
+        <label class="sr-only" for="askInput">Ask a question about the network</label>
+        <input id="askInput" autocomplete="off" placeholder="Ask about an incident, alert or device…" />
+        <button type="submit" class="primarybtn">Send</button>
+      </form>
+    </aside>
+
+    <script src="/data.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>
