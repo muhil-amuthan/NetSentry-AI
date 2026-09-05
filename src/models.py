@@ -21,6 +21,18 @@ data itself rather than triage logic:
   fields. A future deduplication step will *use* fingerprints to collapse
   repeats, but choosing what to collapse is that step's decision, not this
   module's.
+
+Scope note (Step 4)
+-------------------
+Step 4 (deterministic alert generator) adds vocabulary only — no logic:
+
+* :class:`AlertStatus`, the lifecycle state of a single alert occurrence.
+* three descriptive fields on :class:`Alert`: ``device_name``, ``device_type``
+  and ``status``, so an alert carries the device context an operator expects
+  to read next to an event instead of having to look it up.
+
+They are annotations on the *observation*. Nothing here acknowledges,
+suppresses, deduplicates or escalates an alert; those remain later steps.
 """
 
 from __future__ import annotations
@@ -181,6 +193,48 @@ class AlertType(str, Enum):
         return cls.UNKNOWN
 
 
+class AlertStatus(str, Enum):
+    """Lifecycle state of a single alert occurrence.
+
+    Declared so alert feeds (and the deterministic sample data) can say whether
+    an event is still fresh, has been seen by an operator, or has cleared.
+    Transitions between these states belong to later steps — this enum is only
+    the vocabulary.
+    """
+
+    NEW = "new"
+    ACKNOWLEDGED = "acknowledged"
+    ESCALATED = "escalated"
+    RESOLVED = "resolved"
+    CLEARED = "cleared"
+
+    @property
+    def is_open(self) -> bool:
+        """True while the alert still wants attention (not resolved/cleared)."""
+        return self in (AlertStatus.NEW, AlertStatus.ACKNOWLEDGED, AlertStatus.ESCALATED)
+
+    @classmethod
+    def _missing_(cls, value: object) -> "AlertStatus":
+        """Map vendor spellings onto the canonical states, else ``NEW``."""
+        return _ALERT_STATUS_ALIASES.get(str(value).strip().lower(), cls.NEW)
+
+
+_ALERT_STATUS_ALIASES: Dict[str, AlertStatus] = {
+    "new": AlertStatus.NEW, "open": AlertStatus.NEW,
+    "active": AlertStatus.NEW, "firing": AlertStatus.NEW,
+    "unacknowledged": AlertStatus.NEW, "unack": AlertStatus.NEW,
+    "acknowledged": AlertStatus.ACKNOWLEDGED, "ack": AlertStatus.ACKNOWLEDGED,
+    "acked": AlertStatus.ACKNOWLEDGED, "assigned": AlertStatus.ACKNOWLEDGED,
+    "in_progress": AlertStatus.ACKNOWLEDGED, "triaging": AlertStatus.ACKNOWLEDGED,
+    "escalated": AlertStatus.ESCALATED, "escalation": AlertStatus.ESCALATED,
+    "paged": AlertStatus.ESCALATED,
+    "resolved": AlertStatus.RESOLVED, "closed": AlertStatus.RESOLVED,
+    "fixed": AlertStatus.RESOLVED,
+    "cleared": AlertStatus.CLEARED, "clear": AlertStatus.CLEARED,
+    "auto_cleared": AlertStatus.CLEARED, "recovered": AlertStatus.CLEARED,
+}
+
+
 class IncidentState(str, Enum):
     """Lifecycle state of a correlated incident."""
 
@@ -306,6 +360,22 @@ class Topology(NetSentryModel):
 # ---------------------------------------------------------------------------
 
 
+#: Vendor/role spellings for the kind of device an alert came from. Anything
+#: unrecognised degrades to ``None`` rather than rejecting the whole alert.
+_DEVICE_TYPE_ALIASES: Dict[str, NodeType] = {
+    "router": NodeType.ROUTER, "core": NodeType.ROUTER, "core_router": NodeType.ROUTER,
+    "edge_router": NodeType.ROUTER, "bng": NodeType.ROUTER, "gateway": NodeType.ROUTER,
+    "pe": NodeType.ROUTER,
+    "switch": NodeType.SWITCH, "distribution": NodeType.SWITCH,
+    "distribution_switch": NodeType.SWITCH, "aggregation": NodeType.SWITCH,
+    "dist": NodeType.SWITCH,
+    "access": NodeType.ACCESS, "access_router": NodeType.ACCESS, "edge": NodeType.ACCESS,
+    "olt": NodeType.ACCESS, "cpe": NodeType.ACCESS, "cell_site": NodeType.ACCESS,
+    "firewall": NodeType.FIREWALL, "fw": NodeType.FIREWALL,
+    "cloud": NodeType.CLOUD, "transit": NodeType.CLOUD, "internet": NodeType.CLOUD,
+}
+
+
 class Alert(NetSentryModel):
     """A single raw event received from the network.
 
@@ -320,11 +390,22 @@ class Alert(NetSentryModel):
     node_id: str = Field(..., description="Id of the node that raised the alert.")
     interface: Optional[str] = Field(None, description="Interface involved, if any.")
 
+    device_name: Optional[str] = Field(
+        None, description="Human-readable device name as reported by the feed, e.g. 'CORE-R1'."
+    )
+    device_type: Optional[NodeType] = Field(
+        None, description="Kind of device (router/switch/access/...), when the feed supplies it."
+    )
+
     type: AlertType = AlertType.UNKNOWN
     severity: Severity = Severity.INFO
     message: str = ""
 
     source: str = Field("snmp", description="Feed that produced the alert, e.g. snmp/syslog.")
+    status: AlertStatus = Field(
+        AlertStatus.NEW,
+        description="Lifecycle state of this occurrence. Transitions are a later step's job.",
+    )
     metrics: Dict[str, float] = Field(
         default_factory=dict,
         description="Numeric context, e.g. {'loss_pct': 6.2, 'rtt_ms': 47}.",
@@ -338,6 +419,20 @@ class Alert(NetSentryModel):
     @classmethod
     def _norm_severity(cls, v: Any) -> Any:
         return Severity.normalize(v) if v is not None else v
+
+    @field_validator("device_type", mode="before")
+    @classmethod
+    def _norm_device_type(cls, v: Any) -> Any:
+        """Accept vendor spellings; unknown device kinds degrade to ``None``."""
+        if v is None or isinstance(v, NodeType):
+            return v
+        return _DEVICE_TYPE_ALIASES.get(str(v).strip().lower())
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def _norm_status(cls, v: Any) -> Any:
+        """Accept vendor status spellings via :class:`AlertStatus` aliases."""
+        return AlertStatus(v) if v is not None else v
 
     @field_validator("timestamp", mode="before")
     @classmethod
@@ -426,6 +521,7 @@ __all__ = [
     "NetworkLayer",
     "NodeStatus",
     "AlertType",
+    "AlertStatus",
     "IncidentState",
     "NetSentryModel",
     "Node",

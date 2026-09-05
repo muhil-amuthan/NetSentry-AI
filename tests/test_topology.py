@@ -1,8 +1,10 @@
 """
-Tests for the topology loader and graph queries (Step 3).
+Tests for the topology loader, the graph queries and the data models.
 
-These cover structure only — loading, validation and connectivity. No
-correlation, scoring or AI behaviour is exercised, because none exists yet.
+The Step 3 coverage is structure only — loading, validation and connectivity.
+``TestStep4ModelAdditions`` covers the descriptive Alert fields (device context
+and status) added for the Step 4 alert generator. No correlation, scoring or AI
+behaviour is exercised, because none exists yet.
 """
 
 import sys
@@ -11,7 +13,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.models import Alert, AlertType, Incident, NetworkLayer, Severity  # noqa: E402
+from src.models import (  # noqa: E402
+    Alert,
+    AlertStatus,
+    AlertType,
+    Incident,
+    NetworkLayer,
+    NodeType,
+    Severity,
+)
 from src.topology import NetworkTopology, TopologyError, get_topology  # noqa: E402
 
 
@@ -124,6 +134,44 @@ class TestModels(unittest.TestCase):
         self.assertIsNone(inc.priority_score)
         self.assertIsNone(inc.root_cause)
         self.assertIsNone(inc.runbook_id)
+
+
+class TestStep4ModelAdditions(unittest.TestCase):
+    """Step 4 extends Alert with device context + status; nothing else changes."""
+
+    def test_alert_status_vocabulary(self):
+        self.assertEqual(AlertStatus.NEW.value, "new")
+        self.assertEqual(AlertStatus("ack"), AlertStatus.ACKNOWLEDGED)
+        self.assertEqual(AlertStatus("closed"), AlertStatus.RESOLVED)
+        self.assertEqual(AlertStatus("something-else"), AlertStatus.NEW)
+        self.assertTrue(AlertStatus.NEW.is_open)
+        self.assertFalse(AlertStatus.CLEARED.is_open)
+
+    def test_alert_defaults_are_unchanged(self):
+        alert = Alert(id="A3", node_id="R1")
+        self.assertEqual(alert.status, AlertStatus.NEW)
+        self.assertIsNone(alert.device_name)
+        self.assertIsNone(alert.device_type)
+        # Pre-existing behaviour must be untouched.
+        self.assertEqual(alert.type, AlertType.UNKNOWN)
+        self.assertEqual(alert.severity, Severity.INFO)
+        self.assertEqual(alert.fingerprint, "R1:-:UNKNOWN")
+
+    def test_alert_device_context(self):
+        alert = Alert(
+            id="A4", node_id="S1", device_name="SW-S1", device_type="switch",
+            type="DEVICE_UNREACHABLE", severity="critical", status="firing",
+        )
+        self.assertEqual(alert.device_name, "SW-S1")
+        self.assertEqual(alert.device_type, NodeType.SWITCH)
+        self.assertEqual(alert.status, AlertStatus.NEW)
+
+    def test_unknown_device_type_degrades_to_none(self):
+        self.assertIsNone(Alert(id="A5", node_id="R1", device_type="toaster").device_type)
+        self.assertEqual(
+            Alert(id="A6", node_id="R1", device_type="access_router").device_type,
+            NodeType.ACCESS,
+        )
 
 
 if __name__ == "__main__":
