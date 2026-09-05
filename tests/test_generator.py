@@ -529,7 +529,8 @@ class TestStep4ScopeBoundaries(unittest.TestCase):
 
     def test_engine_modules_are_still_stubs(self):
         # processor.py is implemented in Step 5 and is no longer a stub.
-        for module in ("scorer", "priority", "runbook_engine",
+        # scorer.py is implemented in Step 6 and is no longer a stub.
+        for module in ("priority", "runbook_engine",
                        "escalation", "nlp_handler", "database"):
             text = Path(f"src/{module}.py").read_text(encoding="utf-8")
             self.assertNotIn("def ", text, f"src/{module}.py should stay a stub in Step 4")
