@@ -87,6 +87,53 @@ Deduplication, correlation, scoring, prioritisation, runbook retrieval and
 escalation are **not** implemented in this step — the generator only produces
 reliable input data for them.
 
+## Correlation Engine
+
+NetSentry-AI groups related alerts with a **deterministic, evidence-based
+correlation engine** (`src/scorer.py`) — not an LLM. The same alerts always
+produce the same scores, the same groups and the same incident ids.
+
+Each pair of processed alerts is scored on four explainable signals:
+
+| Signal | Points | Fires when |
+| --- | --- | --- |
+| Same device | +30 | both alerts come from the same node |
+| Topology relationship | +20 | the two nodes are directly linked in `data/topology.json` |
+| Time proximity | +20 | the alerts are within 5 minutes |
+| Related alert types | +30 | the alert types are explicitly related (e.g. `LINK_DOWN` ↔ `PACKET_LOSS`) |
+
+Maximum score is 100 and the default correlation threshold is 60. Pairs at or
+above the threshold become edges in a graph, and each connected component
+becomes a **candidate incident** — which gives transitive grouping for
+cascading failures (A↔B, B↔C ⇒ one incident) without ever falling back on a
+naive "everything within N minutes is one incident" rule.
+
+Every result exposes its **score breakdown** for explainability:
+
+```text
+Correlation score: 80
+
+Same device: +30
+Topology relationship: +0
+Within 5 minutes: +20
+Related alert types: +30
+```
+
+```python
+from src.generator import generate_scenario
+from src.processor import process_alerts
+from src.scorer import score_alert_pair, build_candidate_incidents
+
+processed, _ = process_alerts(generate_scenario("cascade_failure"))
+incidents = build_candidate_incidents(processed)
+print(incidents[0].to_dict())
+```
+
+Weights, threshold, time window and the alert-type relationship map are
+constants at the top of `src/scorer.py` so they can be tuned in one place.
+Priority, root-cause analysis, runbook retrieval and LLM explanation are later
+steps — this engine only produces *candidate* incidents.
+
 ## Tests
 
 ```bash
@@ -106,7 +153,7 @@ NetSentry-AI/
 │   ├── generator.py       # Deterministic telecom alert generator
 │   ├── database.py        # Persistence layer (future)
 │   ├── processor.py       # Alert processing pipeline (future)
-│   ├── scorer.py          # Incident scoring engine (future)
+│   ├── scorer.py          # Deterministic correlation scoring engine
 │   ├── priority.py        # Incident prioritization (future)
 │   ├── runbook_engine.py  # Runbook retrieval (future)
 │   ├── escalation.py      # Escalation to engineers (future)
